@@ -1,0 +1,131 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-deep: #080c14;
+  --bg-base: #0f1420;
+  --bg-surface: #161c2c;
+  --bg-elevated: #1c2338;
+  --bg-overlay: #242d44;
+
+  --border-subtle: #1e2a40;
+  --border-default: #293550;
+  --border-accent: #365880;
+
+  --text-muted: #556580;
+  --text-secondary: #8896b4;
+  --text-primary: #c8d0e0;
+  --text-accent: #e8ecf2;
+
+  --accent-primary: #00d4ff;
+  --accent-secondary: #00e5a0;
+  --accent-tertiary: #7c5ce7;
+
+  --status-ok: #00e676;
+  --status-warn: #ffab00;
+  --status-critical: #ff3d4f;
+  --status-info: #00b0ff;
+
+  --cpu-color: #00d4ff;
+  --mem-color: #7c5ce7;
+  --disk-color: #ff6d37;
+  --net-color: #00e676;
+  --io-color: #ffab00;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --glow-accent: 0 0 30px rgba(0, 212, 255, 0.15);
+  --glow-green: 0 0 24px rgba(0, 230, 118, 0.12);
+  --glow-red: 0 0 24px rgba(255, 61, 79, 0.12);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0, 212, 255, 0.06), transparent),
+    radial-gradient(ellipse 60% 40% at 90% 50%, rgba(124, 92, 231, 0.04), transparent),
+    radial-gradient(ellipse 50% 30% at 10% 90%, rgba(0, 230, 160, 0.04), transparent),
+    var(--bg-deep);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-accent);
+}
+
+.metric-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.glass-card {
+  background: linear-gradient(135deg, rgba(22, 28, 44, 0.8), rgba(28, 35, 56, 0.6));
+  border: 1px solid var(--border-subtle);
+  backdrop-filter: blur(20px);
+  border-radius: var(--radius-lg);
+  transition: all 0.25s ease;
+}
+
+.glass-card:hover {
+  border-color: var(--border-accent);
+  box-shadow: var(--glow-accent);
+}
+
+.glow-border {
+  position: relative;
+}
+.glow-border::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--accent-primary), transparent 40%, transparent 60%, var(--accent-secondary));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.12); }
+  50% { box-shadow: 0 0 36px rgba(0, 212, 255, 0.22); }
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(200%); }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
