@@ -1,5 +1,5 @@
 <template>
-  <div class="server-card glass-card" :class="[`status-${server.status}`]" @click="$emit('click')">
+  <div class="server-card glass-card" :class="[`status-${server.status}`, { 'is-pending': pending }]" @click="pending ? null : $emit('click')">
 
     <!-- Header -->
     <div class="card-header">
@@ -11,7 +11,7 @@
         </div>
       </div>
       <div class="header-right">
-        <span v-if="server.pending" class="loading-spinner-sm" />
+        <span v-if="pending" class="loading-spinner-sm" />
         <div v-else class="uptime">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
           <span>{{ formatUptime(server.uptime) }}</span>
@@ -105,7 +105,7 @@
       <span>进程 {{ server.processes.total }} · 运行 {{ server.processes.running }}</span>
       <span v-if="server.processes.zombie > 0" class="zombie-warn">僵尸 {{ server.processes.zombie }}</span>
       <span v-if="server.swap.usage > 50" class="swap-warn">Swap {{ server.swap.usage.toFixed(0) }}%</span>
-      <span v-if="!server.pending" class="view-detail">查看详情 →</span>
+      <span v-if="!pending" class="view-detail">查看详情 →</span>
     </div>
   </div>
 </template>
@@ -113,7 +113,7 @@
 <script setup lang="ts">
 import type { ServerInfo } from '~/types/server'
 
-defineProps<{ server: ServerInfo }>()
+defineProps<{ server: ServerInfo; pending?: boolean }>()
 defineEmits<{ click: [] }>()
 
 function formatUptime(s: number): string {
@@ -164,6 +164,13 @@ function formatTraffic(mbs: number): string {
   align-items: center;
   flex-shrink: 0;
   margin-left: 8px;
+}
+
+.server-card.is-pending {
+  cursor: default;
+}
+.server-card.is-pending:hover {
+  transform: none;
 }
 
 .server-card:hover {

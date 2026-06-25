@@ -28,7 +28,7 @@
     </div>
 
     <!-- Empty (no configs) -->
-    <div v-if="!pending && !servers.length" class="empty-state">
+    <div v-if="!servers.length" class="empty-state">
       <div class="empty-icon">🖥️</div>
       <h2>暂无服务器</h2>
       <p>前往<NuxtLink to="/settings" class="empty-link">服务器管理</NuxtLink>添加 SSH 连接配置</p>
@@ -51,11 +51,12 @@
           v-for="server in filteredServers"
           :key="server.id"
           :server="server"
+          :pending="pendingSet.has(server.id)"
           @click="navigateTo(`/servers/${server.id}`)"
         />
       </div>
 
-      <div v-if="filteredServers.length === 0 && !pending" class="empty-state">
+      <div v-if="filteredServers.length === 0" class="empty-state">
         <p>没有匹配的服务器</p>
       </div>
     </template>
@@ -65,48 +66,20 @@
 <script setup lang="ts">
 import type { ServerInfo } from '~/types/server'
 
-const { data, pending } = await useFetch<ServerInfo[]>('/api/servers', { lazy: true })
+const store = useServerStore()
 
 const refreshInterval = 5
-let refreshTimer: ReturnType<typeof setInterval>
 
-// 每台服务器独立拉取数据
-async function fetchServerOverview(id: string) {
-  try {
-    const fresh = await $fetch<ServerInfo>(`/api/servers/${id}/overview`)
-    if (data.value) {
-      const idx = data.value.findIndex(s => s.id === id)
-      if (idx !== -1) {
-        data.value[idx] = { ...fresh, pending: false }
-      }
-    }
-  } catch {
-    if (data.value) {
-      const idx = data.value.findIndex(s => s.id === id)
-      if (idx !== -1) {
-        data.value[idx] = { ...data.value[idx], status: 'offline' as const, pending: false, collectError: '采集失败' }
-      }
-    }
-  }
-}
-
-// 刷新全部服务器
-async function refreshAll() {
-  const ids = (data.value || []).map(s => s.id)
-  await Promise.allSettled(ids.map(fetchServerOverview))
-}
-
-onMounted(async () => {
-  // 首次加载 — 为每台服务器独立拉取
-  refreshAll()
-
-  // 定时刷新
-  refreshTimer = setInterval(refreshAll, refreshInterval * 1000)
+onMounted(() => {
+  store.startPolling(refreshInterval)
 })
 
-onUnmounted(() => clearInterval(refreshTimer))
+onUnmounted(() => {
+  store.stopPolling()
+})
 
-const servers = computed(() => data.value ?? [])
+const servers = computed(() => store.servers.value)
+const pendingSet = computed(() => store.pending.value)
 
 const search = ref('')
 const activeFilter = ref('all')
