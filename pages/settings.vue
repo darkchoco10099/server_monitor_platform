@@ -5,10 +5,21 @@
         <h1 class="page-title">服务器管理</h1>
         <p class="page-desc">管理 SSH 连接配置，添加需要监控的 Linux 服务器</p>
       </div>
-      <button class="btn-add" @click="openAdd">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        添加服务器
-      </button>
+      <div class="header-actions">
+        <button class="btn-io" @click="handleExport">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          导出配置
+        </button>
+        <button class="btn-io" @click="triggerImport">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="3 7 8 2 13 7"/><line x1="8" y1="2" x2="8" y2="15"/></svg>
+          导入配置
+        </button>
+        <input ref="fileInput" type="file" accept=".json" style="display:none" @change="handleImport" />
+        <button class="btn-add" @click="openAdd">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          添加服务器
+        </button>
+      </div>
     </header>
 
     <!-- Loading -->
@@ -25,6 +36,9 @@
     </div>
 
     <!-- Config List -->
+    <div v-if="statusMessage" class="status-banner" :class="statusMessage.type">
+      {{ statusMessage.text }}
+    </div>
     <div v-else class="configs-grid">
       <div v-for="cfg in configs" :key="cfg.id" class="config-card glass-card">
         <div class="cfg-header">
@@ -78,6 +92,57 @@ const configs = computed(() => data.value ?? [])
 
 const showForm = ref(false)
 const editingConfig = ref<ServerConfig | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
+
+const statusMessage = ref<{ text: string; type: 'success' | 'error' } | null>(null)
+let statusTimer: ReturnType<typeof setTimeout> | null = null
+
+function showStatus(text: string, type: 'success' | 'error') {
+  statusMessage.value = { text, type }
+  if (statusTimer) clearTimeout(statusTimer)
+  statusTimer = setTimeout(() => { statusMessage.value = null }, 5000)
+}
+
+async function handleExport() {
+  try {
+    const result = await $fetch<ServerConfig[]>('/api/configs/export')
+    const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `server-configs-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    showStatus('配置已导出', 'success')
+  } catch (e: any) {
+    showStatus(e?.data?.message || '导出失败', 'error')
+  }
+}
+
+function triggerImport() {
+  fileInput.value?.click()
+}
+
+async function handleImport(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  try {
+    const text = await file.text()
+    const configs = JSON.parse(text)
+    if (!Array.isArray(configs)) throw new Error('格式错误：需要 JSON 数组')
+    const result = await $fetch<{ success: boolean; count: number }>('/api/configs/import', {
+      method: 'POST',
+      body: { configs },
+    })
+    showStatus(`成功导入 ${result.count} 个配置`, 'success')
+    refresh()
+  } catch (e: any) {
+    showStatus(e?.data?.message || e.message || '导入失败', 'error')
+  } finally {
+    // Reset input so the same file can be re-selected
+    if (fileInput.value) fileInput.value.value = ''
+  }
+}
 
 function openAdd() {
   editingConfig.value = null
@@ -112,6 +177,34 @@ async function remove(cfg: ServerConfig) {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn-io {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-io:hover {
+  border-color: var(--border-accent);
+  color: var(--text-primary);
 }
 
 .page-title {
@@ -145,6 +238,23 @@ async function remove(cfg: ServerConfig) {
 .btn-add:hover { box-shadow: var(--glow-accent); }
 
 /* Loading / Empty */
+.status-banner {
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.status-banner.success {
+  background: rgba(0, 230, 118, 0.1);
+  border: 1px solid rgba(0, 230, 118, 0.25);
+  color: var(--status-ok);
+}
+.status-banner.error {
+  background: rgba(255, 61, 79, 0.1);
+  border: 1px solid rgba(255, 61, 79, 0.25);
+  color: var(--status-critical);
+}
+
 .loading-state, .empty-state {
   text-align: center;
   padding: 80px 0;
