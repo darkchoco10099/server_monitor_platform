@@ -1,0 +1,10 @@
+# docker-compose.yml —— 本地/服务器部署
+services:
+  app:
+    build: .
+    container_name: server-monitor
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
